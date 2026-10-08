@@ -1,0 +1,408 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="robots" content="noindex,nofollow">
+<meta name="theme-color" content="#3F6E9D">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="E85">
+<title>Mélangeur E85</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icons/icon-180.png">
+<link rel="icon" type="image/png" href="icons/icon-192.png">
+<style>
+:root{box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);color-scheme:light}
+body{margin:0;-webkit-text-size-adjust:100%}
+[hidden]{display:none!important}
+</style>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700&family=Barlow+Condensed:wght@500;600;700&display=swap">
+<style>
+/* Layout : une colonne façon carnet de pompe ; jauge du réservoir en bandeau Apollo Blue, puis préparer → enregistrer → historique */
+:root{
+  --bg:#EDF1F5; --surface:#FFFFFF; --sunk:#E1E7EE; --ink:#141C24; --muted:#56626F; --line:#D1D9E2;
+  --apollo:#3F6E9D; --apollo-ink:#FFFFFF; --apollo-soft:rgba(255,255,255,.22);
+  /* couleurs de pompe : identiques dans les deux thèmes */
+  --p85:#0A7BC9; --p10:#7DC242; --p98:#1D5E2C;
+  /* variantes lisibles en texte */
+  --t85:#0566AA; --t10:#3E8A1C; --t98:#1D5E2C;
+  --ok:#2C7A4B; --warn:#A8701A; --bad:#B42318;
+  --display:"Barlow Condensed","Arial Narrow",system-ui,sans-serif;
+  --body:"Archivo",-apple-system,system-ui,sans-serif;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#0E141A; --surface:#172029; --sunk:#0A0F14; --ink:#E4EAF0; --muted:#93A0AE; --line:#29343F;
+  --apollo:#2F587F; --apollo-ink:#F2F6FA; --apollo-soft:rgba(255,255,255,.16);
+  --t85:#5BB4F0; --t10:#97D66E; --t98:#6DBB7C;
+  --ok:#5CC28A; --warn:#E3AA4E; --bad:#F06A5D; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0E141A; --surface:#172029; --sunk:#0A0F14; --ink:#E4EAF0; --muted:#93A0AE; --line:#29343F;
+  --apollo:#2F587F; --apollo-ink:#F2F6FA; --apollo-soft:rgba(255,255,255,.16);
+  --t85:#5BB4F0; --t10:#97D66E; --t98:#6DBB7C;
+  --ok:#5CC28A; --warn:#E3AA4E; --bad:#F06A5D; color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font-family:var(--body);font-size:15px;line-height:1.45;padding-inline:16px;padding-block:14px 32px}
+main{max-width:480px;margin:0 auto;display:flex;flex-direction:column;gap:8px}
+h1,h2{font-family:var(--display);font-weight:600;letter-spacing:.01em;margin:0;text-wrap:balance}
+h1{font-size:30px;line-height:1}
+h2{font-size:21px}
+.num{font-variant-numeric:tabular-nums}
+.eyebrow{font-size:11px;text-transform:uppercase;letter-spacing:.09em;font-weight:600;opacity:.8}
+.badge{display:inline-grid;place-items:center;width:36px;height:36px;border-radius:50%;font-family:var(--display);font-weight:700;font-size:14px;line-height:1;flex:none;box-shadow:inset 0 0 0 2px rgba(255,255,255,.35)}
+.b85{background:var(--p85);color:#fff}
+.b10{background:var(--p10);color:#10260A}
+.b98{background:var(--p98);color:#fff}
+header{display:flex;align-items:flex-end;justify-content:space-between;gap:12px}
+header p{margin:4px 0 0;color:var(--muted);font-size:13px}
+.badges{display:flex;gap:6px}
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:14px;display:flex;flex-direction:column;gap:12px}
+.tank{background:var(--apollo);color:var(--apollo-ink);border-color:transparent}
+.tank .hint{color:var(--apollo-ink);opacity:.82}
+.tank-top{display:flex;justify-content:space-between;align-items:baseline;gap:12px}
+.tank-top>div:last-child{min-width:0}
+.big{font-family:var(--display);font-weight:600;font-size:52px;line-height:.9;white-space:nowrap;flex:none}
+.big small{font-size:22px;opacity:.8;margin-left:2px}
+.scale{position:relative;height:14px;border-radius:7px;background:var(--apollo-soft);overflow:hidden}
+.scale .fill{position:absolute;inset:0 auto 0 0;border-radius:7px;background:var(--apollo-ink)}
+.ticks{position:relative;height:16px;font-size:11px;opacity:.85;margin-top:4px}
+.ticks span{position:absolute;transform:translateX(-50%);white-space:nowrap}
+.marker{position:absolute;top:0;bottom:0;width:3px;background:var(--p85)}
+.row{display:flex;gap:10px;flex-wrap:wrap}
+.field{display:flex;flex-direction:column;gap:5px;flex:1 1 120px;min-width:0}
+label,.lbl{font-size:13px;font-weight:600}
+.lbl-fuel{display:flex;align-items:center;gap:6px}
+.dot{width:10px;height:10px;border-radius:50%;flex:none}
+.hint{font-size:12px;color:var(--muted);margin:0}
+input[type=text],textarea{font:inherit;font-size:17px;color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:10px 12px;width:100%}
+textarea{font-size:12px;font-family:ui-monospace,Menlo,monospace;min-height:90px;resize:vertical}
+input:focus-visible,textarea:focus-visible,button:focus-visible,summary:focus-visible{outline:2px solid var(--apollo);outline-offset:2px}
+.unit{position:relative}
+.unit input{padding-right:34px}
+.unit::after{content:attr(data-u);position:absolute;right:12px;top:50%;transform:translateY(-50%);color:var(--muted);font-size:14px;pointer-events:none}
+button{font:inherit;font-weight:600;border-radius:10px;border:1px solid var(--line);background:var(--surface);color:var(--ink);padding:11px 14px;cursor:pointer}
+button.primary{background:var(--apollo);color:var(--apollo-ink);border-color:var(--apollo)}
+button.small{padding:6px 10px;font-size:13px}
+button.danger{color:var(--bad)}
+.seg{display:grid;grid-template-columns:1fr 1fr;background:var(--sunk);border-radius:11px;padding:3px;gap:3px}
+.seg button{border:0;background:transparent;display:flex;align-items:center;justify-content:center;gap:8px;padding:8px 10px;font-size:15px}
+.seg button[aria-pressed="true"]{background:var(--surface);box-shadow:0 1px 3px rgba(0,0,0,.12)}
+.seg .badge{width:26px;height:26px;font-size:11px}
+.fuels{flex-wrap:nowrap;gap:8px}
+.fuels .field{flex:1 1 0}
+.fuels input[type=text]{font-size:20px;padding:12px 26px 12px 10px;font-family:var(--display);font-weight:600}
+.fuels .unit::after{right:9px}
+.opts{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.ltft{display:flex;align-items:center;gap:6px;flex:none}
+.ltft label{font-size:12px;color:var(--muted)}
+.ltft input[type=text]{width:84px;font-size:14px;padding:6px 26px 6px 8px}
+.ltft .unit::after{right:8px;font-size:12px}
+details.panel{display:block}
+.dbody{display:flex;flex-direction:column;gap:16px;margin-top:16px}
+.settings .dbody{gap:28px;margin-top:20px}
+.sgroup{display:flex;flex-direction:column;gap:14px}
+.sgroup .eyebrow{color:var(--muted);opacity:1}
+.sgrid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+.sgrid input[type=text]{padding-left:10px}
+.check{display:flex;align-items:center;gap:10px;font-size:14px;font-weight:500}
+.check input{width:20px;height:20px;accent-color:var(--apollo)}
+.prep{gap:8px}
+.tight{margin-bottom:-4px}
+.reco{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.pour{border-radius:12px;padding:12px;display:flex;gap:10px;align-items:center;background:var(--sunk);min-width:0}
+.pour .v{font-family:var(--display);font-weight:600;font-size:30px;line-height:1}
+.pour .l{font-size:12px;color:var(--muted)}
+.slider{display:flex;flex-direction:column;gap:6px}
+input[type=range]{width:100%;accent-color:var(--p85)}
+.verdict{display:flex;gap:10px;align-items:flex-start;border-radius:12px;padding:12px;border:1px solid var(--line);border-left-width:5px}
+.verdict.ok{border-left-color:var(--ok)} .verdict.warn{border-left-color:var(--warn)} .verdict.bad{border-left-color:var(--bad)}
+.pill{font-size:12px;font-weight:700;padding:3px 8px;border-radius:99px;white-space:nowrap}
+.pill.ok{color:var(--ok);background:color-mix(in srgb,var(--ok) 14%,transparent)}
+.pill.warn{color:var(--warn);background:color-mix(in srgb,var(--warn) 16%,transparent)}
+.pill.bad{color:var(--bad);background:color-mix(in srgb,var(--bad) 14%,transparent)}
+.verdict p{margin:0;font-size:14px}
+.hist{list-style:none;margin:0;padding:0;display:flex;flex-direction:column}
+.hist li{display:grid;grid-template-columns:1fr auto;gap:6px 12px;padding:12px 0;border-top:1px solid var(--line);align-items:center}
+.hist li:first-child{border-top:0}
+.hist .d{font-family:var(--display);font-weight:600;font-size:18px;line-height:1.1}
+.hist .meta{font-size:13px;color:var(--muted);min-width:0;grid-column:1}
+.hist .pct{font-family:var(--display);font-weight:600;font-size:26px;text-align:right;grid-column:2;grid-row:1/3}
+.hist .mix{grid-column:1/-1;display:flex;height:8px;border-radius:4px;overflow:hidden;background:var(--sunk)}
+.hist .act{grid-column:1/-1;display:flex;justify-content:flex-end}
+.c85{color:var(--t85)} .c10{color:var(--t10)} .c98{color:var(--t98)}
+.empty{color:var(--muted);font-size:14px;margin:0}
+details.panel summary{font-family:var(--display);font-weight:600;font-size:21px;cursor:pointer;list-style:none}
+details.panel summary::-webkit-details-marker{display:none}
+details.panel summary::after{content:"+";float:right;color:var(--muted)}
+details.panel[open] summary::after{content:"–"}
+.toast{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:99px;font-size:14px;font-weight:600;opacity:0;transition:opacity .2s;pointer-events:none}
+.toast.show{opacity:1}
+@media (prefers-reduced-motion: reduce){.toast{transition:none}}
+</style>
+
+</head>
+<body>
+<main>
+  <header>
+    <div>
+      <h1>Mélangeur E85</h1>
+      <p>Leon 1.4 TSI ACT · plein mixte</p>
+    </div>
+    <div class="badges" aria-hidden="true"><span class="badge b10">E10</span><span class="badge b98">E5</span><span class="badge b85">E85</span></div>
+  </header>
+
+  <section class="panel tank" aria-labelledby="t-tank">
+    <span class="eyebrow" id="t-tank">Réservoir après le dernier plein</span>
+    <div class="tank-top">
+      <div class="big num" id="tankPct">–<small>% éthanol</small></div>
+      <div class="num" style="text-align:right"><div style="font-weight:600" id="tankVol">–</div><div class="hint" id="tankDate">–</div></div>
+    </div>
+    <div style="padding-inline:14px">
+      <div class="scale" aria-hidden="true"><div class="fill" id="pctFill"></div><div class="marker" id="pctMarker"></div></div>
+      <div class="ticks num" id="ticks" aria-hidden="true"></div>
+    </div>
+  </section>
+
+  <section class="panel prep" aria-labelledby="t-prep">
+    <h2 id="t-prep">Préparer le plein</h2>
+    <div class="field">
+      <label for="appoint">Appoint affiché par la voiture</label>
+      <div class="unit" data-u="L"><input type="text" id="appoint" inputmode="decimal" value="15"></div>
+      <p class="hint" id="rangeNote"></p>
+    </div>
+    <div class="field tight">
+      <span class="lbl" id="baseLbl">Compléter avec</span>
+      <div class="seg" role="group" aria-labelledby="baseLbl">
+        <button type="button" id="baseE10" data-base="e10" aria-pressed="true"><span class="badge b10">E10</span>SP95-E10</button>
+        <button type="button" id="baseE98" data-base="e98" aria-pressed="false"><span class="badge b98">E5</span>SP98</button>
+      </div>
+    </div>
+    <div class="reco">
+      <div class="pour"><span class="badge b85">E85</span><div><div class="v num" id="recE85">–</div><div class="l">d'abord, au maximum</div></div></div>
+      <div class="pour"><span class="badge" id="recBaseBadge">E10</span><div><div class="v num" id="recBase">–</div><div class="l">ensuite, jusqu'au déclic</div></div></div>
+    </div>
+    <div class="slider">
+      <label for="e85pick">Tester une autre quantité d'E85 : <span class="num" id="pickVal">–</span></label>
+      <input type="range" id="e85pick" min="0" max="50" step="0.5" value="0">
+    </div>
+    <div class="verdict" id="verdict"><span class="pill" id="vPill">–</span><p id="vText">–</p></div>
+  </section>
+
+  <section class="panel" aria-labelledby="t-save">
+    <h2 id="t-save">Enregistrer le plein</h2>
+    <p class="hint">Saisis les litres affichés par la pompe. Si tu as rempli jusqu'au déclic, le volume restant est recalculé à partir de ces chiffres exacts.</p>
+    <div class="row fuels">
+      <div class="field"><label for="putE85" class="lbl-fuel"><span class="dot" style="background:var(--p85)"></span>E85</label><div class="unit" data-u="L"><input type="text" id="putE85" inputmode="decimal"></div></div>
+      <div class="field"><label for="putE10" class="lbl-fuel"><span class="dot" style="background:var(--p10)"></span>SP95-E10</label><div class="unit" data-u="L"><input type="text" id="putE10" inputmode="decimal"></div></div>
+      <div class="field"><label for="putE98" class="lbl-fuel"><span class="dot" style="background:var(--p98)"></span>SP98</label><div class="unit" data-u="L"><input type="text" id="putE98" inputmode="decimal"></div></div>
+    </div>
+    <div class="opts">
+      <label class="check"><input type="checkbox" id="isFull" checked> Rempli jusqu'au déclic</label>
+      <div class="ltft"><label for="ltft">LTFT</label><div class="unit" data-u="%"><input type="text" id="ltft" inputmode="decimal" placeholder="opt."></div></div>
+    </div>
+    <button class="primary" id="saveBtn">Enregistrer le plein</button>
+  </section>
+
+  <section class="panel" aria-labelledby="t-hist">
+    <h2 id="t-hist">Historique</h2>
+    <ul class="hist" id="hist"></ul>
+  </section>
+
+  <details class="panel settings">
+    <summary>Réglages</summary>
+    <div class="dbody">
+    <div class="sgroup">
+      <span class="eyebrow">Réservoir et seuil</span>
+      <div class="sgrid">
+        <div class="field"><label for="sCap">Capacité</label><div class="unit" data-u="L"><input type="text" id="sCap" inputmode="decimal"></div></div>
+        <div class="field"><label for="sMargin">Marge appoint</label><div class="unit" data-u="± L"><input type="text" id="sMargin" inputmode="decimal" style="padding-right:42px"></div></div>
+        <div class="field"><label for="sTarget">Seuil visé</label><div class="unit" data-u="%"><input type="text" id="sTarget" inputmode="decimal"></div></div>
+      </div>
+    </div>
+    <button id="saveSettings">Appliquer les réglages</button>
+    </div>
+  </details>
+
+  <details class="panel">
+    <summary>Sauvegarde</summary>
+    <div class="dbody">
+    <p class="hint">Les données restent sur cet appareil. Copie la sauvegarde de temps en temps (dans Notes, par exemple) ; colle-la ici pour la restaurer.</p>
+    <textarea id="backup" aria-label="Données de sauvegarde"></textarea>
+    <div class="row">
+      <button id="copyBtn">Copier la sauvegarde</button>
+      <button id="importBtn">Restaurer depuis le texte collé</button>
+    </div>
+    </div>
+  </details>
+</main>
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<script>
+(function(){
+const KEY='melangeur-e85-v1';
+const DEFS={cap:50,target:25,margin:4,e85:85,e10:10,e98:5,base:'e10'};
+const DEF={settings:{...DEFS},entries:[]};
+const FUEL={e10:{name:'SP95-E10',badge:'E10',cls:'b10'},e98:{name:'SP98',badge:'E5',cls:'b98'}};
+let data=load();
+
+function normalize(d){
+  d.settings={...DEFS,...d.settings,e85:DEFS.e85,e10:DEFS.e10,e98:DEFS.e98};
+  d.entries=d.entries.map(e=>({...e,e98L:isFinite(e.e98L)?e.e98L:0,e10L:isFinite(e.e10L)?e.e10L:0}));
+  return d;
+}
+function load(){try{const r=localStorage.getItem(KEY);if(r){const d=JSON.parse(r);if(d&&d.settings&&Array.isArray(d.entries))return normalize(d);}}catch(e){}return normalize(JSON.parse(JSON.stringify(DEF)));}
+function save(){try{localStorage.setItem(KEY,JSON.stringify(data));}catch(e){toast("Enregistrement impossible sur cet appareil");}}
+
+const $=id=>document.getElementById(id);
+const num=v=>{if(v===null||v===undefined)return NaN;const n=parseFloat(String(v).replace(',','.').trim());return isFinite(n)?n:NaN;};
+const f1=n=>n.toLocaleString('fr-FR',{maximumFractionDigits:1,minimumFractionDigits:0});
+const clamp=(n,a,b)=>Math.min(b,Math.max(a,n));
+const fmtDate=s=>new Date(s+'T12:00:00').toLocaleDateString('fr-FR',{day:'numeric',month:'short',year:'numeric'});
+const rate=k=>data.settings[k]/100;
+
+function chain(){
+  const s=data.settings;
+  let t=rate('e10'),vol=s.cap;
+  data.entries.sort((a,b)=>a.date<b.date?-1:a.date>b.date?1:0);
+  for(const en of data.entries){
+    const added=en.e85L+en.e10L+en.e98L;
+    const R=en.full?Math.max(0,s.cap-added):clamp(s.cap-en.appoint,0,s.cap);
+    en.R=R;
+    vol=R+added;
+    t=vol>0?(R*t+en.e85L*rate('e85')+en.e10L*rate('e10')+en.e98L*rate('e98'))/vol:rate('e10');
+    en.vol=vol; en.t=t;
+  }
+  return {t,vol};
+}
+function finalPct(R,t,x){
+  const cap=data.settings.cap,b=rate(data.settings.base);
+  const space=Math.max(0,cap-R),xe=Math.min(x,space);
+  return (R*t+xe*rate('e85')+(space-xe)*b)/cap;
+}
+function recoFor(R,t){
+  const cap=data.settings.cap,b=rate(data.settings.base),T=data.settings.target/100;
+  return (cap*T-R*t-b*(cap-R))/(rate('e85')-b);
+}
+function bounds(){
+  const s=data.settings,cap=s.cap,a=num($('appoint').value);
+  const Rest=clamp(cap-(isFinite(a)?a:0),0,cap);
+  return {ok:isFinite(a)&&a>=0,Rest,Rmin:clamp(Rest-s.margin,0,cap),Rmax:clamp(Rest+s.margin,0,cap)};
+}
+
+let state={t:.1,vol:50},reco=0;
+function render(){
+  state=chain();
+  const s=data.settings,last=data.entries[data.entries.length-1];
+  $('tankPct').innerHTML=f1(state.t*100)+'<small>% éthanol</small>';
+  $('tankVol').textContent=last?f1(state.vol)+' L au départ':'Supposé plein de SP95-E10';
+  $('tankDate').textContent=last?'Plein du '+fmtDate(last.date):'Aucun plein enregistré';
+  const maxScale=50;
+  $('pctFill').style.width=clamp(state.t*100/maxScale*100,0,100)+'%';
+  $('pctMarker').style.left='calc('+clamp(s.target/maxScale*100,0,100)+'% - 1.5px)';
+  $('ticks').innerHTML=[0,10,20,30,40,50].map((v,i,a)=>'<span style="left:'+(v/maxScale*100)+'%">'+v+' %</span>').join('');
+  $('e85pick').max=s.cap;
+  ['e10','e98'].forEach(k=>$(k==='e10'?'baseE10':'baseE98').setAttribute('aria-pressed',String(s.base===k)));
+  const bf=FUEL[s.base];$('recBaseBadge').className='badge '+bf.cls;$('recBaseBadge').textContent=bf.badge;
+  prep(true);renderHist();renderSettings();
+  $('backup').value=JSON.stringify({settings:data.settings,entries:data.entries.map(({id,date,appoint,full,e85L,e10L,e98L,ltft})=>({id,date,appoint,full,e85L,e10L,e98L,ltft}))});
+}
+function fillForm(x){
+  if($('putE85').dataset.touched)return;
+  const {Rest}=bounds(),rest=Math.max(0,data.settings.cap-Rest-x);
+  $('putE85').value=f1(x);
+  $('putE10').value=data.settings.base==='e10'?f1(rest):'0';
+  $('putE98').value=data.settings.base==='e98'?f1(rest):'0';
+}
+function prep(resetPick){
+  const cap=data.settings.cap,b=bounds();
+  if(!b.ok){$('rangeNote').textContent='Entre un nombre de litres.';return;}
+  $('rangeNote').textContent='Restant estimé : '+f1(b.Rest)+' L, calcul fait entre '+f1(b.Rmin)+' et '+f1(b.Rmax)+' L.';
+  let x=Math.min(recoFor(b.Rmin,state.t),recoFor(b.Rmax,state.t),recoFor(b.Rest,state.t));
+  x=Math.floor(Math.max(0,x)*2)/2; x=Math.min(x,Math.max(0,cap-b.Rest)); reco=x;
+  $('recE85').textContent=f1(x)+' L';
+  $('recBase').textContent='≈ '+f1(Math.max(0,cap-b.Rest-x))+' L';
+  if(resetPick)$('e85pick').value=x;
+  pick();
+  if(resetPick)fillForm(x);
+}
+function pick(){
+  const s=data.settings,t=state.t,b=bounds(),x=num($('e85pick').value);
+  $('pickVal').textContent=f1(x)+' L';
+  const worst=Math.max(finalPct(b.Rmin,t,x),finalPct(b.Rmax,t,x),finalPct(b.Rest,t,x))*100,T=s.target;
+  let cls,label,txt;
+  if(worst<=T+0.05){cls='ok';label='Dans le seuil';txt='Au pire '+f1(worst)+' % d\'éthanol après le plein (seuil '+f1(T)+' %).';}
+  else if(worst<=T+5){cls='warn';label='Au-delà du seuil';txt='Au pire '+f1(worst)+' %. Au-dessus de ton seuil : à tester seulement en surveillant les corrections de richesse.';}
+  else{cls='bad';label='Trop élevé';txt='Au pire '+f1(worst)+' %. Bien au-delà de ton seuil, risque de voyant moteur et de mélange pauvre.';}
+  if(t*100>T&&reco===0)txt='Le réservoir est déjà à '+f1(t*100)+' % : fais ce plein sans E85. '+txt;
+  $('verdict').className='verdict '+cls;$('vPill').className='pill '+cls;$('vPill').textContent=label;$('vText').textContent=txt;
+}
+function renderHist(){
+  const ul=$('hist');
+  if(!data.entries.length){ul.innerHTML='<li><p class="empty">Aucun plein enregistré. Le premier plein se calcule à partir d\'un réservoir de SP95-E10.</p></li>';return;}
+  ul.innerHTML='';
+  [...data.entries].reverse().forEach(en=>{
+    const parts=[];
+    if(en.e85L)parts.push('<b class="c85">'+f1(en.e85L)+' E85</b>');
+    if(en.e10L)parts.push('<b class="c10">'+f1(en.e10L)+' E10</b>');
+    if(en.e98L)parts.push('<b class="c98">'+f1(en.e98L)+' SP98</b>');
+    const ltft=en.ltft!==null&&isFinite(en.ltft)?' · LTFT '+(en.ltft>0?'+':'')+f1(en.ltft)+' %':'';
+    const tot=en.vol||1,seg=(v,c)=>v?'<span style="width:'+(v/tot*100)+'%;background:'+c+'"></span>':'';
+    const li=document.createElement('li');
+    li.innerHTML='<div class="d num">'+fmtDate(en.date)+'</div>'+
+      '<div class="pct num">'+f1(en.t*100)+' %</div>'+
+      '<div class="meta num">'+f1(en.R)+' L restants + '+parts.join(' + ')+(en.full?'':' · non plein')+ltft+'</div>'+
+      '<div class="mix" aria-hidden="true">'+seg(en.R,'var(--muted)')+seg(en.e85L,'var(--p85)')+seg(en.e10L,'var(--p10)')+seg(en.e98L,'var(--p98)')+'</div>'+
+      '<div class="act"><button class="small danger" data-del="'+en.id+'">Supprimer</button></div>';
+    ul.appendChild(li);
+  });
+}
+function renderSettings(){const s=data.settings;['Cap','Target','Margin'].forEach(k=>$('s'+k).value=f1(s[k.toLowerCase()]));}
+
+let tt;function toast(m){const el=$('toast');el.textContent=m;el.classList.add('show');clearTimeout(tt);tt=setTimeout(()=>el.classList.remove('show'),2200);}
+
+$('appoint').addEventListener('input',()=>{delete $('putE85').dataset.touched;prep(true);});
+['baseE10','baseE98'].forEach(id=>$(id).addEventListener('click',()=>{data.settings.base=$(id).dataset.base;save();delete $('putE85').dataset.touched;render();}));
+$('e85pick').addEventListener('input',()=>{pick();fillForm(num($('e85pick').value));});
+['putE85','putE10','putE98'].forEach(id=>$(id).addEventListener('input',()=>{$('putE85').dataset.touched='1';}));
+
+$('saveBtn').addEventListener('click',()=>{
+  const g=id=>Math.max(0,num($(id).value)||0);
+  const e85L=g('putE85'),e10L=g('putE10'),e98L=g('putE98'),a=num($('appoint').value),sum=e85L+e10L+e98L;
+  if(sum===0){toast('Indique au moins un volume versé');return;}
+  if(sum>data.settings.cap){toast('Plus que la capacité : vérifie les volumes ou la capacité');return;}
+  const l=num($('ltft').value),d=new Date();
+  const iso=d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+  data.entries.push({id:'e'+Date.now(),date:iso,appoint:isFinite(a)?a:sum,full:$('isFull').checked,e85L,e10L,e98L,ltft:isFinite(l)?l:null});
+  save();$('ltft').value='';delete $('putE85').dataset.touched;render();toast('Plein enregistré');
+});
+$('hist').addEventListener('click',ev=>{
+  const b=ev.target.closest('button[data-del]');if(!b)return;
+  if(b.dataset.armed){data.entries=data.entries.filter(e=>e.id!==b.dataset.del);save();render();toast('Plein supprimé');}
+  else{b.dataset.armed='1';b.textContent='Confirmer la suppression';setTimeout(()=>{if(b.isConnected){delete b.dataset.armed;b.textContent='Supprimer';}},4000);}
+});
+$('saveSettings').addEventListener('click',()=>{
+  const n={...data.settings,cap:num($('sCap').value),target:num($('sTarget').value),margin:num($('sMargin').value)};
+  if(!(n.cap>0&&n.target>0&&n.target<100&&n.margin>=0)){toast('Réglages incohérents, vérifie les valeurs');return;}
+  data.settings=n;save();render();toast('Réglages appliqués');
+});
+$('copyBtn').addEventListener('click',()=>{
+  const ta=$('backup');
+  if(navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(ta.value).then(()=>toast('Sauvegarde copiée'),()=>{ta.select();toast('Sélectionnée : copie-la manuellement');});}
+  else{ta.select();toast('Sélectionnée : copie-la manuellement');}
+});
+$('importBtn').addEventListener('click',()=>{
+  try{const d=JSON.parse($('backup').value);if(!d.settings||!Array.isArray(d.entries))throw 0;
+    d.entries.forEach(e=>{if(typeof e.date!=='string'||!isFinite(e.e85L))throw 0;});
+    data=normalize({settings:d.settings,entries:d.entries});save();render();toast('Données restaurées');}
+  catch(e){toast('Texte non reconnu : colle une sauvegarde complète');}
+});
+render();
+})();
+</script>
+<script>
+if('serviceWorker' in navigator){window.addEventListener('load',()=>{navigator.serviceWorker.register('sw.js').catch(()=>{});});}
+</script>
+</body>
+</html>
