@@ -106,6 +106,10 @@ details.panel{display:block}
 .sgroup .eyebrow{color:var(--muted);opacity:1}
 .sgrid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
 .sgrid input[type=text]{padding-left:10px}
+.preview{font-size:13px;line-height:1.4;border-radius:10px;padding:10px 12px;background:var(--sunk);color:var(--muted)}
+.preview b{color:var(--ink)}
+.preview.warn{background:color-mix(in srgb,var(--warn) 15%,transparent);color:var(--ink)}
+.preview .w{display:block;margin-top:4px;color:var(--warn);font-weight:600}
 .check{display:flex;align-items:center;gap:10px;font-size:14px;font-weight:500}
 .check input{width:20px;height:20px;accent-color:var(--apollo)}
 .prep{gap:8px}
@@ -206,6 +210,7 @@ details.panel[open] summary::after{content:"–"}
       <label class="check"><input type="checkbox" id="isFull" checked> Rempli jusqu'au déclic</label>
       <div class="ltft"><label for="ltft">LTFT</label><div class="unit" data-u="%"><input type="text" id="ltft" inputmode="decimal" placeholder="opt."></div></div>
     </div>
+    <div class="preview num" id="savePrev" aria-live="polite"></div>
     <button class="primary" id="saveBtn">Enregistrer le plein</button>
   </section>
 
@@ -300,7 +305,7 @@ function render(){
   state=chain();
   const s=data.settings,last=data.entries[data.entries.length-1];
   $('tankPct').innerHTML=f1(state.t*100)+'<small>% éthanol</small>';
-  $('tankVol').textContent=last?f1(state.vol)+' L au départ':'Supposé plein de SP95-E10';
+  $('tankVol').textContent=last?f1(state.vol)+'L après le plein':'Supposé plein de SP95-E10';
   $('tankDate').textContent=last?'Plein du '+fmtDate(last.date):'Aucun plein enregistré';
   const maxScale=50;
   $('pctFill').style.width=clamp(state.t*100/maxScale*100,0,100)+'%';
@@ -309,7 +314,7 @@ function render(){
   $('e85pick').max=s.cap;
   ['e10','e98'].forEach(k=>$(k==='e10'?'baseE10':'baseE98').setAttribute('aria-pressed',String(s.base===k)));
   const bf=FUEL[s.base];$('recBaseBadge').className='badge '+bf.cls;$('recBaseBadge').textContent=bf.badge;
-  prep(true);renderHist();renderSettings();
+  prep(true);renderHist();renderSettings();if(typeof preview==='function')preview();
   $('backup').value=JSON.stringify({settings:data.settings,entries:data.entries.map(({id,date,appoint,full,e85L,e10L,e98L,ltft})=>({id,date,appoint,full,e85L,e10L,e98L,ltft}))});
 }
 function fillForm(x){
@@ -369,13 +374,36 @@ let tt;function toast(m){const el=$('toast');el.textContent=m;el.classList.add('
 $('appoint').addEventListener('input',()=>{delete $('putE85').dataset.touched;prep(true);});
 ['baseE10','baseE98'].forEach(id=>$(id).addEventListener('click',()=>{data.settings.base=$(id).dataset.base;save();delete $('putE85').dataset.touched;render();}));
 $('e85pick').addEventListener('input',()=>{pick();fillForm(num($('e85pick').value));});
-['putE85','putE10','putE98'].forEach(id=>$(id).addEventListener('input',()=>{$('putE85').dataset.touched='1';}));
+['putE85','putE10','putE98'].forEach(id=>$(id).addEventListener('input',()=>{$('putE85').dataset.touched='1';preview();}));
+['isFull'].forEach(id=>$(id).addEventListener('change',preview));
+['appoint','e85pick'].forEach(id=>$(id).addEventListener('input',preview));
+let warnMsg='';
+function preview(){
+  const s=data.settings,g=id=>Math.max(0,num($(id).value)||0);
+  const e85L=g('putE85'),e10L=g('putE10'),e98L=g('putE98'),sum=e85L+e10L+e98L,a=num($('appoint').value),full=$('isFull').checked;
+  const btn=$('saveBtn');delete btn.dataset.armed;btn.textContent='Enregistrer le plein';
+  const el=$('savePrev');
+  if(sum===0){el.hidden=true;warnMsg='';return;}
+  const R=full?Math.max(0,s.cap-sum):clamp(s.cap-(isFinite(a)?a:0),0,s.cap);
+  const vol=R+sum,t=(R*state.t+e85L*rate('e85')+e10L*rate('e10')+e98L*rate('e98'))/vol;
+  warnMsg='';
+  if(sum>s.cap)warnMsg='Plus de '+f1(s.cap)+' L versés au total : vérifie les volumes saisis.';
+  else if(isFinite(a)){
+    if(full&&Math.abs(sum-a)>s.margin)warnMsg='Case « déclic » cochée, mais '+f1(sum)+' L versés pour '+f1(a)+' L d\'appoint affiché. Si le réservoir n\'est pas plein, décoche-la.';
+    else if(!full&&sum>a+s.margin)warnMsg='Tu as versé plus que l\'appoint affiché : le réservoir est sans doute plein, coche la case « déclic ».';
+  }
+  el.hidden=!warnMsg;
+  el.className='preview warn';
+  el.innerHTML='<span class="w" style="margin:0">'+warnMsg+'</span>';
+}
 
 $('saveBtn').addEventListener('click',()=>{
   const g=id=>Math.max(0,num($(id).value)||0);
   const e85L=g('putE85'),e10L=g('putE10'),e98L=g('putE98'),a=num($('appoint').value),sum=e85L+e10L+e98L;
   if(sum===0){toast('Indique au moins un volume versé');return;}
   if(sum>data.settings.cap){toast('Plus que la capacité : vérifie les volumes ou la capacité');return;}
+  const btn=$('saveBtn');
+  if(warnMsg&&!btn.dataset.armed){btn.dataset.armed='1';btn.textContent='Enregistrer quand même';toast('Vérifie l\'avertissement avant d\'enregistrer');return;}
   const l=num($('ltft').value),d=new Date();
   const iso=d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
   data.entries.push({id:'e'+Date.now(),date:iso,appoint:isFinite(a)?a:sum,full:$('isFull').checked,e85L,e10L,e98L,ltft:isFinite(l)?l:null});
