@@ -1,6 +1,6 @@
 // Mélangeur E85 : fonctionnement hors connexion.
 // Changer CACHE (v1 → v2…) à chaque mise à jour des fichiers.
-const CACHE = 'e85-v2';
+const CACHE = 'e85-v3';
 const CORE = ['./', 'index.html', 'manifest.webmanifest', 'icons/icon-180.png', 'icons/icon-192.png', 'icons/icon-512.png'];
 
 self.addEventListener('install', e => {
